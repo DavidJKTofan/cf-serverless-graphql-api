@@ -160,6 +160,15 @@ The D1 database is bound to the Worker as `DB` and is strongly typed in TypeScri
 - [Cloudflare D1 Docs](https://developers.cloudflare.com/d1/)
 - [GraphQL Yoga Docs](https://the-guild.dev/graphql/yoga-server)
 
+### Inspiration (third-party code)
+
+- https://graphql.wtf/episodes/72-graphql-yoga-3-with-cloudflare-workers
+- https://dev.to/fauna/building-an-edge-serverless-graphql-backend-with-cloudflare-workers-and-fauna-1bp0
+- https://www.contentful.com/blog/graphql-and-serverless-where-cloud-computing-is-heading/
+- https://github.com/cloudflare/workers-graphql-server
+- https://blog.cloudflare.com/building-a-graphql-server-on-the-edge-with-cloudflare-workers/
+- https://medium.com/@estebanrules/building-a-graphql-yoga-server-with-typescript-on-cloudflare-workers-with-cloudflare-kv-afa383b5f875
+
 ## License
 
 MIT
