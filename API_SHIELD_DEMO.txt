@@ -1,0 +1,220 @@
+# ===================================================================
+# GraphQL WAF Rule Test Queries
+# Rule: Block if query_size > 10 OR query_depth > 2
+# ===================================================================
+
+# -------------------------------------------------------------------
+# TEST 1: Normal Query (SHOULD PASS)
+# Size: 4, Depth: 1
+# Expected: ✅ Allowed
+# -------------------------------------------------------------------
+query NormalQuery {
+  todos {
+    id
+    title
+    completed
+    createdAt
+  }
+}
+
+
+# -------------------------------------------------------------------
+# TEST 2: Large Query - Exceeds Size Limit (SHOULD BLOCK)
+# Size: 12, Depth: 1
+# Expected: ❌ Blocked (size > 10)
+# -------------------------------------------------------------------
+query LargeQueryExceedsSize {
+  todos {
+    id
+    title
+    completed
+    createdAt
+  }
+  todo1: todo(id: 1) {
+    id
+    title
+    completed
+    createdAt
+  }
+  todo2: todo(id: 2) {
+    id
+    title
+    completed
+    createdAt
+  }
+}
+
+
+# -------------------------------------------------------------------
+# TEST 3: Multiple Separate Queries (SHOULD BLOCK)
+# Size: 16, Depth: 1
+# Expected: ❌ Blocked (size > 10)
+# -------------------------------------------------------------------
+query MultipleTodoQueries {
+  todos {
+    id
+    title
+    completed
+    createdAt
+  }
+  t1: todo(id: 1) { id title completed createdAt }
+  t2: todo(id: 2) { id title completed createdAt }
+  t3: todo(id: 3) { id title completed createdAt }
+}
+
+
+# -------------------------------------------------------------------
+# TEST 4: Maximum Safe Query (SHOULD PASS)
+# Size: 10, Depth: 1
+# Expected: ✅ Allowed (exactly at limit)
+# -------------------------------------------------------------------
+query MaximumSafeQuery {
+  todos {
+    id
+    title
+  }
+  todo1: todo(id: 1) {
+    id
+    title
+    completed
+    createdAt
+  }
+  todo2: todo(id: 2) {
+    id
+    title
+  }
+}
+
+
+# -------------------------------------------------------------------
+# TEST 5: Simulated Nested Query - Depth Test (SHOULD BLOCK)
+# Size: 6, Depth: 3
+# Expected: ❌ Blocked (depth > 2)
+# 
+# Note: Your current schema doesn't support nesting, but this shows
+# what a depth=3 query would look like if you had nested types:
+# -------------------------------------------------------------------
+# query DeepNestedQuery {
+#   todos {
+#     id
+#     user {              # Depth 2
+#       name
+#       profile {         # Depth 3
+#         bio
+#         avatar
+#       }
+#     }
+#   }
+# }
+#
+# Since your schema doesn't support this, here's an equivalent size test:
+
+
+# -------------------------------------------------------------------
+# TEST 6: Boundary Test - Just Over Size Limit (SHOULD BLOCK)
+# Size: 11, Depth: 1
+# Expected: ❌ Blocked (size > 10)
+# -------------------------------------------------------------------
+query JustOverSizeLimit {
+  todos {
+    id
+    title
+    completed
+    createdAt
+  }
+  todo1: todo(id: 1) {
+    id
+    title
+    completed
+  }
+  todo2: todo(id: 2) {
+    id
+    title
+    completed
+    createdAt
+  }
+}
+
+
+# -------------------------------------------------------------------
+# TEST 7: Mutation with Large Response (SHOULD PASS)
+# Size: 4, Depth: 1
+# Expected: ✅ Allowed
+# -------------------------------------------------------------------
+mutation CreateTodoNormal {
+  createTodo(title: "Test WAF protection") {
+    id
+    title
+    completed
+    createdAt
+  }
+}
+
+
+# -------------------------------------------------------------------
+# TEST 8: Multiple Mutations (SHOULD BLOCK if size > 10)
+# Size: 12, Depth: 1
+# Expected: ❌ Blocked (size > 10)
+# -------------------------------------------------------------------
+mutation MultipleMutations {
+  create1: createTodo(title: "First task") {
+    id
+    title
+    completed
+    createdAt
+  }
+  create2: createTodo(title: "Second task") {
+    id
+    title
+    completed
+    createdAt
+  }
+  create3: createTodo(title: "Third task") {
+    id
+    title
+    completed
+    createdAt
+  }
+}
+
+
+# ===================================================================
+# cURL Test Commands
+# ===================================================================
+
+# TEST 1: Normal Query (Should Pass)
+# curl -X POST https://your-worker.workers.dev/graphql \
+#   -H "Content-Type: application/json" \
+#   -d '{"query":"query { todos { id title completed createdAt } }"}'
+
+# TEST 2: Large Query (Should Block)
+# curl -X POST https://your-worker.workers.dev/graphql \
+#   -H "Content-Type: application/json" \
+#   -d '{"query":"query { todos { id title completed createdAt } todo1: todo(id: 1) { id title completed createdAt } todo2: todo(id: 2) { id title completed createdAt } }"}'
+
+# TEST 6: Just Over Limit (Should Block)
+# curl -X POST https://your-worker.workers.dev/graphql \
+#   -H "Content-Type: application/json" \
+#   -d '{"query":"query { todos { id title completed createdAt } todo1: todo(id: 1) { id title completed } todo2: todo(id: 2) { id title completed createdAt } }"}'
+
+
+# ===================================================================
+# Expected WAF Block Response
+# ===================================================================
+# HTTP Status: 403 Forbidden
+# Body: Cloudflare error page or custom block page
+# Headers: cf-ray, cf-cache-status, etc.
+
+
+# ===================================================================
+# Monitoring & Verification
+# ===================================================================
+# 
+# After running tests, verify in Cloudflare Dashboard:
+# 1. Security → Events → Filter by "API Shield"
+# 2. Check query_size and query_depth values in logs
+# 3. Confirm blocks are triggering correctly
+# 
+# Analytics Query to check blocked requests:
+# Navigate to: Security → WAF → Custom Rules → View Activity
+# Or use GraphQL Analytics API to query firewall events
